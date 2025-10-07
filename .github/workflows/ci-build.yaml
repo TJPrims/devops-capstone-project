@@ -28,12 +28,24 @@ jobs:
           --health-retries 5
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip wheel
           pip install -r requirements.txt
+
+      - name: Wait for PostgreSQL
+        run: |
+          for i in {1..10}; do
+            pg_isready -h postgres -p 5432 && break || sleep 5;
+          done
+
+      - name: Debug installed packages
+        run: pip list
+
+      - name: Log DATABASE_URI
+        run: echo "DATABASE_URI=postgres://postgres:pgs3cr3t@postgres:5432/testdb"
 
       - name: Lint with flake8
         run: |
@@ -42,6 +54,6 @@ jobs:
 
       - name: Run unit tests with Nose
         env:
-          DATABASE_URI: postgres://postgres:pgs3cr3t@localhost:5432/testdb
+          DATABASE_URI: postgres://postgres:pgs3cr3t@postgres:5432/testdb
         run: |
           nosetests -v --with-spec --spec-color --with-coverage --cover-package=service
