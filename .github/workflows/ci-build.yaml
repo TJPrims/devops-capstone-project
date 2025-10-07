@@ -44,24 +44,29 @@ jobs:
             pg_isready -h postgres -p 5432 && echo "PostgreSQL is ready!" && break || sleep 5;
           done
 
-      - name: Debug installed packages
-        run: pip list
-
-      - name: Log DATABASE_URI
-        run: echo $DATABASE_URI
-
-      - name: Verify SQLAlchemy PostgreSQL dialect
-        continue-on-error: true
+      - name: Check psycopg2-binary version
         run: |
-          python -c "from sqlalchemy.dialects import registry; print(registry.load('postgresql'))"
+          python -c "import psycopg2; print(psycopg2.__version__)"
+
+      - name: Verify SQLAlchemy connection
+        run: |
+          python -c "
+          from sqlalchemy import create_engine;
+          engine = create_engine('postgresql://postgres:pgs3cr3t@postgres:5432/testdb');
+          conn = engine.connect();
+          print('Connection successful');
+          conn.close();
+          "
+
+      - name: Debug environment
+        run: |
+          echo "Python version:"
+          python --version
+          echo "Installed packages:"
+          pip list
+          echo "Environment variables:"
+          env
 
       - name: Run unit tests with Nose
         run: |
           nosetests -v --with-spec --spec-color --with-coverage --cover-package=service
-
-      - name: Upload coverage report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-report
-          path: .coverage
