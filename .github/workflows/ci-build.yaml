@@ -27,7 +27,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     env:
-      DATABASE_URI: postgres://postgres:pgs3cr3t@postgres:5432/testdb
+      DATABASE_URI: postgresql://postgres:pgs3cr3t@postgres:5432/testdb
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -35,8 +35,10 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip wheel
-          pip install --force-reinstall psycopg2-binary
           pip install -r requirements.txt
+
+      - name: Reinstall psycopg2-binary
+        run: pip install --force-reinstall psycopg2-binary
 
       - name: Wait for PostgreSQL
         run: |
@@ -44,28 +46,15 @@ jobs:
             pg_isready -h postgres -p 5432 && echo "PostgreSQL is ready!" && break || sleep 5;
           done
 
-      - name: Check psycopg2-binary version
-        run: |
-          python -c "import psycopg2; print(psycopg2.__version__)"
+      - name: Debug DATABASE_URI
+        run: echo $DATABASE_URI
 
-      - name: Verify SQLAlchemy connection
+      - name: Verify SQLAlchemy PostgreSQL dialect
         run: |
           python -c "
-          from sqlalchemy import create_engine;
-          engine = create_engine('postgresql://postgres:pgs3cr3t@postgres:5432/testdb');
-          conn = engine.connect();
-          print('Connection successful');
-          conn.close();
+          from sqlalchemy.dialects import registry;
+          print(registry.load('postgresql'))
           "
-
-      - name: Debug environment
-        run: |
-          echo "Python version:"
-          python --version
-          echo "Installed packages:"
-          pip list
-          echo "Environment variables:"
-          env
 
       - name: Run unit tests with Nose
         run: |
